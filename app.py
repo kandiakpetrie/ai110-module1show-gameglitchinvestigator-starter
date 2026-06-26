@@ -1,6 +1,8 @@
 import random
 import streamlit as st
 
+from logic_utils import check_guess, reset_game_state
+
 def get_range_for_difficulty(difficulty: str):
     if difficulty == "Easy":
         return 1, 20
@@ -28,24 +30,8 @@ def parse_guess(raw: str):
 
     return True, value, None
 
-
-def check_guess(guess, secret):
-    if guess == secret:
-        return "Win", "🎉 Correct!"
-
-    try:
-        if guess > secret:
-            return "Too High", "📈 Go HIGHER!"
-        else:
-            return "Too Low", "📉 Go LOWER!"
-    except TypeError:
-        g = str(guess)
-        if g == secret:
-            return "Win", "🎉 Correct!"
-        if g > secret:
-            return "Too High", "📈 Go HIGHER!"
-        return "Too Low", "📉 Go LOWER!"
-
+# FIXME: Logic breaks here --> guess and secret aren't defined as int or str
+# check_guess moved to logic_utils.py
 
 def update_score(current_score: int, outcome: str, attempt_number: int):
     if outcome == "Win":
@@ -131,12 +117,13 @@ with col2:
 with col3:
     show_hint = st.checkbox("Show hint", value=True)
 
+#FIXME: Logic breaks here --> the program doesn't reset properly when a new game is started.
 if new_game:
-    st.session_state.attempts = 0
-    st.session_state.secret = random.randint(1, 100)
+    for key, value in reset_game_state(low, high).items():
+        st.session_state[key] = value
     st.success("New game started.")
     st.rerun()
-
+#FIXED: Resets the attempt counter to match the start page, cleared the win/lost issue so the game doesn't end after clicking new game, emptied the guess history and resets score to zero.
 if st.session_state.status != "playing":
     if st.session_state.status == "won":
         st.success("You already won. Start a new game to play again.")
@@ -155,10 +142,7 @@ if submit:
     else:
         st.session_state.history.append(guess_int)
 
-        if st.session_state.attempts % 2 == 0:
-            secret = str(st.session_state.secret)
-        else:
-            secret = st.session_state.secret
+        secret = st.session_state.secret
 
         outcome, message = check_guess(guess_int, secret)
 
